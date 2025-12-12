@@ -1,0 +1,16 @@
+databases:
+  booking:
+    host: "localhost"
+    port: 5432
+    user: "booking_user"
+    password: "booking_pass"
+    dbname: "booking_db"
+    sslmode: "disable"
+  
+  hotel:
+    host: "localhost"
+    port: 5433
+    user: "hotel_user"
+    password: "hotel_pass"
+    dbname: "hotel_db"
+    sslmode: "disable"
