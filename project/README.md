@@ -6,7 +6,7 @@
 
 ## Использование в коде
 ```go
-import "your-project/internal/database"
+import "project/internal/database"
 
 // Подключение
 bookingDB, _ := database.ConnectBookingDB(cfg)
