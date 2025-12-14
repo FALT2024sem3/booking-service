@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package hotel.v1;
+
+option go_package = "github.com/FALT2024sem3/booking-service/tree/open-api/project/package/fast/stable;faststable";
+
+service HotelService {
+  rpc GetRoomPrice (GetRoomPriceRequest)  returns (GetRoomPriceResponse);
+}
+
+message GetRoomPriceRequest {
+  int32 hotel_id = 1;
+  int32 room_type_id = 2;
+}
+
+message GetRoomPriceResponse {
+  double price = 1;
+  string currency = 2;
+}
