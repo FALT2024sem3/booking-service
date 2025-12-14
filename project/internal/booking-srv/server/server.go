@@ -45,13 +45,79 @@ func (server *BookingServer) SetServer() {
 }
 
 func (server *BookingServer) CreateBookingHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
+	request := stg.BookingInfo{}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		writeInvalidJSON(w, http.StatusBadRequest)
+		return
+	}
+
+	bookingId, err := server.Src.CreateBooking(request)
+
+	if err != nil {
+		writeInvalidJSONError(w, err)
+		return
+	}
+
+	response := map[string]int{
+		"booking_id": bookingId,
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 func (server *BookingServer) GetAllClientBookingsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
+	request := 0
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		writeInvalidJSON(w, http.StatusBadRequest)
+		return
+	}
+
+	bookings, err := server.Src.GetAllClientBookings(request)
+
+	if err != nil {
+		writeInvalidJSONError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(bookings)
 }
 
 func (server *BookingServer) GetAllHotelBookingsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
+	request := 0
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		writeInvalidJSON(w, http.StatusBadRequest)
+		return
+	}
+
+	bookings, err := server.Src.GetAllHotelBookings(request)
+
+	if err != nil {
+		writeInvalidJSONError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(bookings)
 }
