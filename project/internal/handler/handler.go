@@ -9,6 +9,8 @@ import (
 
 	"encoding/json"
 
+	"hotel-booking-system/package/events"
+
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/sirupsen/logrus"
 )
@@ -20,13 +22,21 @@ func NewHandler() *Handler {
 }
 
 func (h *Handler) HandleMessage(message []byte, topic kafka.TopicPartition, cn int) error {
-	logrus.Infof("Consumer #%d, Message from kafka with offset %d '%s' on partition %d", cn, topic.Offset, string(message), topic.Partition)
+	var event events.BookingCreatedEvent
+	if err := json.Unmarshal(message, &event); err != nil {
+		logrus.Errorf("Failed to parse event JSON: %v", err)
+		return nil
+	}
+	logrus.Infof("Processing booking ID: %d for email: %s", event.BookingID, event.UserEmail)
 	data := map[string]interface{}{
-		"to_addr":  string(message),
-		"subject":  "Teen Titans GO",
+		"to_addr":  event.UserEmail,
+		"subject":  "Подтверждение бронирования",
 		"template": "hello_email",
 		"vars": map[string]string{
-			"Name": "User",
+			"UserName":  event.UserName,
+			"BookingID": fmt.Sprintf("%d", event.BookingID),
+			"UserEmail": event.UserEmail,
+			"Amount":    fmt.Sprintf("%.2f", event.Amount),
 		},
 	}
 

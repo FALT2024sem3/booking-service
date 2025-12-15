@@ -3,9 +3,11 @@ package stg
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"hotel-booking-system/internal/booking-srv/exceptions"
 	"hotel-booking-system/internal/database"
 	"hotel-booking-system/internal/kafka"
+	"hotel-booking-system/package/events"
 	"sync"
 	"time"
 
@@ -79,17 +81,30 @@ func (storage *Storage) CreateBooking(bookingInfo BookingInfo) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-
 	user, err := storage.userRepository.GetUserByID(ctx, bookingInfo.UserID)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	event := events.BookingCreatedEvent{
+		BookingID: bookingID,
+		UserEmail: user.Email,
+		UserName:  user.FullName,
+		Amount:    totalPrice,
+	}
+
+	payload, err := json.Marshal(event)
+	if err != nil {
+		logrus.Errorf("Failed to marshal event: %v", err)
+	}
 	producer, err := kafka.NewProducer(address)
 	if err != nil {
 		logrus.Fatal(err)
 	}
-	logrus.Printf("Starting producer for %s...", user.Email)
-	if err = producer.Produce(user.Email, topic); err != nil {
+	if err = producer.Produce(string(payload), topic); err != nil {
 		logrus.Error(err)
 	}
-	logrus.Printf("Finished producing messages for %s", user.Email)
+
+	logrus.Printf("Sent booking event to Kafka for %s", user.Email)
 	producer.Close()
 	return bookingID, nil
 }
