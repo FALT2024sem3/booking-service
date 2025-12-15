@@ -8,6 +8,7 @@ import (
 	"hotel-booking-system/internal/database"
 	"hotel-booking-system/internal/kafka"
 	"hotel-booking-system/package/events"
+	hotelv1 "hotel-booking-system/package/proto/fast/stable"
 	"sync"
 	"time"
 
@@ -33,12 +34,14 @@ type Storage struct {
 	database       database.BookingRepository
 	userRepository database.UserRepository
 	mux            sync.RWMutex
+	hotelClient    hotelv1.HotelServiceClient
 }
 
-func NewStorage(db *sql.DB) *Storage {
+func NewStorage(db *sql.DB, client hotelv1.HotelServiceClient) *Storage {
 	return &Storage{
 		database:       *database.NewBookingRepository(db),
 		userRepository: *database.NewUserRepository(db),
+		hotelClient:    client,
 	}
 }
 
@@ -58,9 +61,22 @@ func (storage *Storage) CreateBooking(bookingInfo BookingInfo) (int, error) {
 	if bookingInfo.CheckOutDate.Before(bookingInfo.CheckInDate) {
 		return 0, exceptions.ErrDates
 	}
+	req := &hotelv1.GetRoomPriceRequest{
+		HotelId:    int32(bookingInfo.HotelID),
+		RoomTypeId: int32(bookingInfo.RoomType),
+	}
 
-	// Andrey's Talalaev func
-	hotelPricePerNight, roomId := float64(15), 2 //, exceptions.ErrProblemsWithHotelManager
+	// 2. Делаем gRPC вызов (Storage звонит в HotelService)
+	resp, err := storage.hotelClient.GetRoomPrice(context.Background(), req)
+	if err != nil {
+		// Если сервис отелей недоступен или вернул ошибку
+		logrus.Errorf("Error getting price from Hotel Service: %v", err)
+		return 0, err
+	}
+
+	// 3. Берем реальную цену из ответа
+	hotelPricePerNight := resp.Price
+	roomId := 2
 
 	totalPrice := hotelPricePerNight * float64(DaysBetween(bookingInfo.CheckInDate, bookingInfo.CheckOutDate))
 
@@ -128,14 +144,13 @@ func (storage *Storage) GetAllHotelBookings(hotelId int) ([]database.Booking, er
 	storage.mux.RLock()
 	defer storage.mux.RUnlock()
 
-	//ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	//defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	// Artem's Dmitroc func
-	//bookings, err := storage.database.GetHotelBookings(ctx, hotelId)
-	//if err != nil {
-	//	return []database.Booking{}, err
-	//}
+	bookings, err := storage.database.GetHotelBookings(ctx, hotelId)
+	if err != nil {
+		return []database.Booking{}, err
+	}
 
-	return nil, nil
+	return bookings, nil
 }

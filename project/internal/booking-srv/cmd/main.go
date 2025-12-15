@@ -9,12 +9,16 @@ import (
 	"hotel-booking-system/internal/handler"
 	"hotel-booking-system/internal/kafka"
 	"hotel-booking-system/internal/notification"
+	hotelv1 "hotel-booking-system/package/proto/fast/stable"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
@@ -63,6 +67,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	conn, err := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("did not connect to hotel service: %v", err)
+	}
+	defer conn.Close()
+
+	hotelClient := hotelv1.NewHotelServiceClient(conn)
+
 	booking_bd, err := database.ConnectBookingDB(*config)
 
 	if err != nil {
@@ -70,7 +82,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	local_storage := stg.NewStorage(booking_bd)
+	local_storage := stg.NewStorage(booking_bd, hotelClient)
 	bookingServer := server.NewBookingServer(local_storage)
 	bookingServer.SetServer()
 	httpServer := &http.Server{
