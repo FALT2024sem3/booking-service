@@ -3,7 +3,10 @@ package server
 import (
 	"encoding/json"
 	"hotel-booking-system/internal/booking-srv/stg"
+	api "hotel-booking-system/package/api/stable"
 	"net/http"
+
+	"github.com/docker/docker/testutil/request"
 )
 
 func writeInvalidJSON(w http.ResponseWriter, status int) {
@@ -51,14 +54,14 @@ func (server *BookingServer) CreateBookingHandler(w http.ResponseWriter, r *http
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-	request := stg.BookingInfo{}
+	var req api.CreateBookingRequest
 
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeInvalidJSON(w, http.StatusBadRequest)
 		return
 	}
 
-	bookingId, err := server.Src.CreateBooking(request)
+	bookingId, err := server.Src.CreateBooking(request.Get())
 
 	if err != nil {
 		writeInvalidJSONError(w, err)
