@@ -5,8 +5,6 @@ import (
 	"hotel-booking-system/internal/booking-srv/stg"
 	api "hotel-booking-system/package/api/stable"
 	"net/http"
-
-	"github.com/docker/docker/testutil/request"
 )
 
 func writeInvalidJSON(w http.ResponseWriter, status int) {
@@ -55,24 +53,28 @@ func (server *BookingServer) CreateBookingHandler(w http.ResponseWriter, r *http
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	var req api.CreateBookingRequest
-
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeInvalidJSON(w, http.StatusBadRequest)
 		return
 	}
-
-	bookingId, err := server.Src.CreateBooking(request.Get())
-
+	bookingInfo := stg.BookingInfo{
+		UserID:       req.UserID,
+		HotelID:      req.HotelID,
+		RoomType:     req.RoomTypeID,
+		CheckInDate:  req.CheckInDate,
+		CheckOutDate: req.CheckOutDate,
+		GuestsCount:  req.GuestsCount,
+	}
+	bookingId, err := server.Src.CreateBooking(bookingInfo)
 	if err != nil {
 		writeInvalidJSONError(w, err)
 		return
 	}
-
 	response := map[string]int{
 		"booking_id": bookingId,
 	}
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 func (server *BookingServer) GetAllClientBookingsHandler(w http.ResponseWriter, r *http.Request) {
@@ -97,7 +99,7 @@ func (server *BookingServer) GetAllClientBookingsHandler(w http.ResponseWriter, 
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(bookings)
+	_ = json.NewEncoder(w).Encode(bookings)
 }
 
 func (server *BookingServer) GetAllHotelBookingsHandler(w http.ResponseWriter, r *http.Request) {
@@ -122,5 +124,5 @@ func (server *BookingServer) GetAllHotelBookingsHandler(w http.ResponseWriter, r
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(bookings)
+	_ = json.NewEncoder(w).Encode(bookings)
 }

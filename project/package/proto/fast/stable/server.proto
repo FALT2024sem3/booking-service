@@ -16,4 +16,5 @@ message GetRoomPriceRequest {
 message GetRoomPriceResponse {
   double price = 1;
   string currency = 2;
+  int32 room_id = 3;
 }

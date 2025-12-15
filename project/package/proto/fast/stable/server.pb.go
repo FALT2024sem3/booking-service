@@ -77,6 +77,7 @@ type GetRoomPriceResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Price         float64                `protobuf:"fixed64,1,opt,name=price,proto3" json:"price,omitempty"`
 	Currency      string                 `protobuf:"bytes,2,opt,name=currency,proto3" json:"currency,omitempty"`
+	RoomId        int32                  `protobuf:"varint,3,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -125,6 +126,13 @@ func (x *GetRoomPriceResponse) GetCurrency() string {
 	return ""
 }
 
+func (x *GetRoomPriceResponse) GetRoomId() int32 {
+	if x != nil {
+		return x.RoomId
+	}
+	return 0
+}
+
 var File_package_proto_fast_stable_server_proto protoreflect.FileDescriptor
 
 const file_package_proto_fast_stable_server_proto_rawDesc = "" +
@@ -133,10 +141,11 @@ const file_package_proto_fast_stable_server_proto_rawDesc = "" +
 	"\x13GetRoomPriceRequest\x12\x19\n" +
 	"\bhotel_id\x18\x01 \x01(\x05R\ahotelId\x12 \n" +
 	"\froom_type_id\x18\x02 \x01(\x05R\n" +
-	"roomTypeId\"H\n" +
+	"roomTypeId\"a\n" +
 	"\x14GetRoomPriceResponse\x12\x14\n" +
 	"\x05price\x18\x01 \x01(\x01R\x05price\x12\x1a\n" +
-	"\bcurrency\x18\x02 \x01(\tR\bcurrency2]\n" +
+	"\bcurrency\x18\x02 \x01(\tR\bcurrency\x12\x17\n" +
+	"\aroom_id\x18\x03 \x01(\x05R\x06roomId2]\n" +
 	"\fHotelService\x12M\n" +
 	"\fGetRoomPrice\x12\x1d.hotel.v1.GetRoomPriceRequest\x1a\x1e.hotel.v1.GetRoomPriceResponseB^Z\\github.com/FALT2024sem3/booking-service/tree/open-api/project/package/fast/stable;faststableb\x06proto3"
 

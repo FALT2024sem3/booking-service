@@ -66,17 +66,14 @@ func (storage *Storage) CreateBooking(bookingInfo BookingInfo) (int, error) {
 		RoomTypeId: int32(bookingInfo.RoomType),
 	}
 
-	// 2. Делаем gRPC вызов (Storage звонит в HotelService)
 	resp, err := storage.hotelClient.GetRoomPrice(context.Background(), req)
 	if err != nil {
-		// Если сервис отелей недоступен или вернул ошибку
 		logrus.Errorf("Error getting price from Hotel Service: %v", err)
 		return 0, err
 	}
 
-	// 3. Берем реальную цену из ответа
 	hotelPricePerNight := resp.Price
-	roomId := 2
+	roomId := int(resp.RoomId)
 
 	totalPrice := hotelPricePerNight * float64(DaysBetween(bookingInfo.CheckInDate, bookingInfo.CheckOutDate))
 
