@@ -468,6 +468,44 @@ func (r *HotelRepository) GetAvailableRooms(ctx context.Context, roomType int) (
 	return rooms, nil
 }
 
+// GetHotelBookings return all hotel's bookings
+func (r *BookingRepository) GetHotelBookings(ctx context.Context, hotelID int) ([]Booking, error) {
+	query := `
+		SELECT id, user_id, hotel_id, room_id, check_in_date, check_out_date, 
+		       guests_count, total_price
+		FROM bookings 
+		WHERE hotel_id = $1
+		ORDER BY check_in_date DESC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, hotelID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query hotel bookings: %w", err)
+	}
+	defer rows.Close()
+
+	var bookings []Booking
+	for rows.Next() {
+		var booking Booking
+		err := rows.Scan(
+			&booking.ID,
+			&booking.UserID,
+			&booking.HotelID,
+			&booking.RoomID,
+			&booking.CheckInDate,
+			&booking.CheckOutDate,
+			&booking.GuestsCount,
+			&booking.TotalPrice,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan booking: %w", err)
+		}
+		bookings = append(bookings, booking)
+	}
+
+	return bookings, nil
+}
+
 // UpdateRoomAvailability update room availability
 func (r *HotelRepository) UpdateRoomAvailability(ctx context.Context, roomID int, available bool) error {
 	query := `UPDATE rooms SET is_available = $1 WHERE id = $2`
