@@ -6,14 +6,27 @@ import (
 	"hotel-booking-system/internal/booking-srv/server"
 	"hotel-booking-system/internal/booking-srv/stg"
 	"hotel-booking-system/internal/database"
+	"hotel-booking-system/internal/handler"
+	"hotel-booking-system/internal/kafka"
+	"hotel-booking-system/internal/notification"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
+
+const (
+	topic         = "my-topic"
+	consumerGroup = "my-consumer-group"
+)
+
+var address = []string{"localhost:9091", "localhost:9092", "localhost:9093"}
 
 // Загрузка конфигурации из YAML файла
 func LoadConfig(filename string) (*database.DBConfig, error) {
@@ -22,17 +35,28 @@ func LoadConfig(filename string) (*database.DBConfig, error) {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	var config database.DBConfig
+	var config struct {
+		Databases struct {
+			Booking database.DBConfig `yaml:"booking"`
+		} `yaml:"databases"`
+	}
+
 	err = yaml.Unmarshal(data, &config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse YAML: %w", err)
 	}
 
-	return &config, nil
+	return &config.Databases.Booking, nil
 }
 
 func main() {
-	config, err := LoadConfig("../../../configs/database.yaml")
+
+	if err := godotenv.Load(); err != nil {
+		_ = godotenv.Load("../../../.env")
+	}
+
+	configPath := "configs/database.yaml"
+	config, err := LoadConfig(configPath)
 
 	if err != nil {
 		fmt.Printf("Error loading config: %v\n", err)
@@ -58,14 +82,48 @@ func main() {
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		fmt.Println("Starting server on http://localhost:8080")
+		fmt.Println("Starting server_1 on http://localhost:8080")
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Error starting the server: %v\n", err)
 		}
 	}()
 
+	go func() {
+		addr := ":8090"
+		mux := http.NewServeMux()
+		mux.HandleFunc("/html_email", notification.HTMLTemplateEmailHandler)
+
+		log.Printf("Starting server_2 on http://localhost %s", addr)
+		if err := http.ListenAndServe(addr, mux); err != nil {
+			log.Printf("Error starting notification server: %v", err)
+		}
+	}()
+
+	notificationHandler := handler.NewHandler()
+	consumer1, err := kafka.NewConsumer(notificationHandler, address, topic, consumerGroup, 1)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	consumer2, err := kafka.NewConsumer(notificationHandler, address, topic, consumerGroup, 2)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	consumer3, err := kafka.NewConsumer(notificationHandler, address, topic, consumerGroup, 3)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	go consumer1.Start()
+	go consumer2.Start()
+	go consumer3.Start()
+
 	<-stop
 	fmt.Println("\nReceived shutdown signal...")
+
+	// Stop consumers
+	_ = consumer1.Stop()
+	_ = consumer2.Stop()
+	_ = consumer3.Stop()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

@@ -3,10 +3,21 @@ package stg
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"hotel-booking-system/internal/booking-srv/exceptions"
 	"hotel-booking-system/internal/database"
+	"hotel-booking-system/internal/kafka"
+	"hotel-booking-system/package/events"
 	"sync"
 	"time"
+
+	"github.com/sirupsen/logrus"
+)
+
+var address = []string{"localhost:9091", "localhost:9092", "localhost:9093"}
+
+const (
+	topic = "my-topic"
 )
 
 type BookingInfo struct {
@@ -19,13 +30,15 @@ type BookingInfo struct {
 }
 
 type Storage struct {
-	database database.BookingRepository
-	mux      sync.RWMutex
+	database       database.BookingRepository
+	userRepository database.UserRepository
+	mux            sync.RWMutex
 }
 
 func NewStorage(db *sql.DB) *Storage {
 	return &Storage{
-		database: *database.NewBookingRepository(db),
+		database:       *database.NewBookingRepository(db),
+		userRepository: *database.NewUserRepository(db),
 	}
 }
 
@@ -47,10 +60,7 @@ func (storage *Storage) CreateBooking(bookingInfo BookingInfo) (int, error) {
 	}
 
 	// Andrey's Talalaev func
-	hotelPricePerNight, roomId, err := float64(15), 2, exceptions.ErrProblemsWithHotelManager
-	if err != nil {
-		return 0, err
-	}
+	hotelPricePerNight, roomId := float64(15), 2 //, exceptions.ErrProblemsWithHotelManager
 
 	totalPrice := hotelPricePerNight * float64(DaysBetween(bookingInfo.CheckInDate, bookingInfo.CheckOutDate))
 
@@ -71,9 +81,31 @@ func (storage *Storage) CreateBooking(bookingInfo BookingInfo) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	user, err := storage.userRepository.GetUserByID(ctx, bookingInfo.UserID)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	event := events.BookingCreatedEvent{
+		BookingID: bookingID,
+		UserEmail: user.Email,
+		UserName:  user.FullName,
+		Amount:    totalPrice,
+	}
 
-	// Artem's Petrosian Kafka
+	payload, err := json.Marshal(event)
+	if err != nil {
+		logrus.Errorf("Failed to marshal event: %v", err)
+	}
+	producer, err := kafka.NewProducer(address)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+	if err = producer.Produce(string(payload), topic); err != nil {
+		logrus.Error(err)
+	}
 
+	logrus.Printf("Sent booking event to Kafka for %s", user.Email)
+	producer.Close()
 	return bookingID, nil
 }
 
@@ -96,14 +128,14 @@ func (storage *Storage) GetAllHotelBookings(hotelId int) ([]database.Booking, er
 	storage.mux.RLock()
 	defer storage.mux.RUnlock()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	//ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	//defer cancel()
 
 	// Artem's Dmitroc func
-	bookings, err := storage.database.GetHotelBookings(ctx, hotelId)
-	if err != nil {
-		return []database.Booking{}, err
-	}
+	//bookings, err := storage.database.GetHotelBookings(ctx, hotelId)
+	//if err != nil {
+	//	return []database.Booking{}, err
+	//}
 
-	return bookings, nil
+	return nil, nil
 }

@@ -1,7 +1,7 @@
 databases:
   booking:
     host: "localhost"
-    port: 5432
+    port: 5436
     user: "booking_user"
     password: "booking_pass"
     dbname: "booking_db"
@@ -9,7 +9,7 @@ databases:
   
   hotel:
     host: "localhost"
-    port: 5433
+    port: 5437
     user: "hotel_user"
     password: "hotel_pass"
     dbname: "hotel_db"
