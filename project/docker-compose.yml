@@ -31,7 +31,7 @@ services:
       - "5437:5432"
     volumes:
       - ./migrations/02_hotel_tables.sql:/docker-entrypoint-initdb.d/01.sql
-      - ./scripts/init_hotel_data.sql:/docker-entrypoint-initdb.d/02_data.sqls
+      - ./scripts/init_hotel_data.sql:/docker-entrypoint-initdb.d/02_data.sql
       - hotel-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U hotel_user -d hotel_db"]
