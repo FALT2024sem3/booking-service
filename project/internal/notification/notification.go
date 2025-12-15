@@ -1,4 +1,4 @@
-package main
+package notification
 
 import (
 	"bytes"
@@ -9,8 +9,6 @@ import (
 	"os"
 	"strings"
 	"text/template"
-
-	"github.com/joho/godotenv"
 )
 
 func sendHtmlEmail(to []string, subject string, htmlBody string) error {
@@ -65,8 +63,6 @@ func HTMLTemplateEmailHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("Failed to execute template: %v", err)
 	}
 
-	log.Println(rendered.String())
-
 	err = sendHtmlEmail(to, reqBody.Subject, rendered.String())
 	if err != nil {
 		log.Println(err.Error())
@@ -76,15 +72,4 @@ func HTMLTemplateEmailHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Email sent successfully"))
-}
-
-func main() {
-	godotenv.Load()
-	addr := ":8080"
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/html_email", HTMLTemplateEmailHandler)
-
-	log.Printf("server is listening at %s", addr)
-	log.Fatal(http.ListenAndServe(addr, mux))
 }

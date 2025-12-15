@@ -33,17 +33,16 @@ func (h *Handler) HandleMessage(message []byte, topic kafka.TopicPartition, cn i
 	jsonData, _ := json.Marshal(data)
 
 	resp, err := http.Post(
-		"http://localhost:8080/html_email",
+		"http://localhost:8090/html_email",
 		"application/json",
 		bytes.NewBuffer(jsonData),
 	)
 	if err != nil {
-		log.Println("asasas")
 		log.Fatal(err)
 	}
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
-	fmt.Printf("Response my: %s\n", body)
+	fmt.Printf("Response: %s\n", body)
 	return nil
 }
