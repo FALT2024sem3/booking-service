@@ -523,6 +523,209 @@ func (r *HotelRepository) UpdateRoomAvailability(ctx context.Context, roomID int
 	return nil
 }
 
+// HotelFilters структура для фильтрации отелей
+type HotelFilters struct {
+	City      string
+	RoomType  string
+	MaxGuests int
+	MinPrice  float64
+	MaxPrice  float64
+}
+
+// GetHotelsWithFilters возвращает отели с фильтрацией
+func (r *HotelRepository) GetHotelsWithFilters(ctx context.Context, filters HotelFilters) ([]Hotel, error) {
+	query := `
+        SELECT DISTINCT h.id, h.name, h.address, h.contact_phone
+        FROM hotels h
+        LEFT JOIN room_types_in_hotels rth ON h.id = rth.hotel_id
+        LEFT JOIN rooms r ON rth.id = r.room_type
+        WHERE 1=1
+    `
+
+	var args []interface{}
+	argIndex := 1
+
+	if filters.City != "" {
+		query += fmt.Sprintf(" AND h.address ILIKE $%d", argIndex)
+		args = append(args, "%"+filters.City+"%")
+		argIndex++
+	}
+
+	if filters.RoomType != "" {
+		query += fmt.Sprintf(" AND rth.type = $%d", argIndex)
+		args = append(args, filters.RoomType)
+		argIndex++
+	}
+
+	if filters.MaxGuests > 0 {
+		query += fmt.Sprintf(" AND rth.max_guests >= $%d", argIndex)
+		args = append(args, filters.MaxGuests)
+		argIndex++
+	}
+
+	if filters.MinPrice > 0 {
+		query += fmt.Sprintf(" AND rth.price_per_night >= $%d", argIndex)
+		args = append(args, filters.MinPrice)
+		argIndex++
+	}
+
+	if filters.MaxPrice > 0 {
+		query += fmt.Sprintf(" AND rth.price_per_night <= $%d", argIndex)
+		args = append(args, filters.MaxPrice)
+		argIndex++
+	}
+
+	query += " ORDER BY h.name"
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query hotels with filters: %w", err)
+	}
+	defer rows.Close()
+
+	var hotels []Hotel
+	for rows.Next() {
+		var hotel Hotel
+		err := rows.Scan(
+			&hotel.ID,
+			&hotel.Name,
+			&hotel.Address,
+			&hotel.ContactPhone,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan hotel: %w", err)
+		}
+		hotels = append(hotels, hotel)
+	}
+
+	return hotels, nil
+}
+
+// CreateHotel creates new hotel
+func (r *HotelRepository) CreateHotel(ctx context.Context, hotel *Hotel) (int, error) {
+	query := `
+		INSERT INTO hotels (name, address, contact_phone)
+		VALUES ($1, $2, $3)
+		RETURNING id
+	`
+
+	var id int
+	err := r.db.QueryRowContext(ctx, query,
+		hotel.Name,
+		hotel.Address,
+		hotel.ContactPhone,
+	).Scan(&id)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to create hotel: %w", err)
+	}
+
+	hotel.ID = id
+	return id, nil
+}
+
+// UpdateHotel updates hotel information
+func (r *HotelRepository) UpdateHotel(ctx context.Context, hotel *Hotel) error {
+	query := `
+		UPDATE hotels 
+		SET name = $1, address = $2, contact_phone = $3
+		WHERE id = $4
+	`
+
+	result, err := r.db.ExecContext(ctx, query,
+		hotel.Name,
+		hotel.Address,
+		hotel.ContactPhone,
+		hotel.ID,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to update hotel: %w", err)
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}
+
+// CreateRoom creates new room
+func (r *HotelRepository) CreateRoom(ctx context.Context, room *Room) (int, error) {
+	query := `
+		INSERT INTO rooms (room_type, room_number, is_available)
+		VALUES ($1, $2, $3)
+		RETURNING id
+	`
+
+	var id int
+	err := r.db.QueryRowContext(ctx, query,
+		room.RoomType,
+		room.RoomNumber,
+		room.IsAvailable,
+	).Scan(&id)
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to create room: %w", err)
+	}
+
+	room.ID = id
+	return id, nil
+}
+
+// UpdateRoom updates room information
+func (r *HotelRepository) UpdateRoom(ctx context.Context, room *Room) error {
+	query := `
+		UPDATE rooms 
+		SET room_type = $1, room_number = $2, is_available = $3
+		WHERE id = $4
+	`
+
+	result, err := r.db.ExecContext(ctx, query,
+		room.RoomType,
+		room.RoomNumber,
+		room.IsAvailable,
+		room.ID,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to update room: %w", err)
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}
+
+// GetRoomPriceInfo возвращает информацию о цене комнаты для gRPC
+func (r *HotelRepository) GetRoomPriceInfo(ctx context.Context, hotelID, roomTypeID int) (float64, string, int, error) {
+	query := `
+        SELECT rth.price_per_night, 'RUB' as currency, r.id as room_id
+        FROM room_types_in_hotels rth
+        LEFT JOIN rooms r ON rth.id = r.room_type
+        WHERE rth.hotel_id = $1 AND rth.id = $2 AND r.is_available = true
+        LIMIT 1
+    `
+
+	var price float64
+	var currency string
+	var roomID int
+
+	err := r.db.QueryRowContext(ctx, query, hotelID, roomTypeID).Scan(&price, &currency, &roomID)
+	if err == sql.ErrNoRows {
+		return 0, "", 0, ErrNotFound
+	}
+	if err != nil {
+		return 0, "", 0, fmt.Errorf("failed to get room price: %w", err)
+	}
+
+	return price, currency, roomID, nil
+}
+
 // CalculateBookingPrice counts booking price
 func (r *HotelRepository) CalculateBookingPrice(ctx context.Context, roomTypeID int, nights int, guests int) (float64, error) {
 	roomType, err := r.GetRoomTypeByID(ctx, roomTypeID)
