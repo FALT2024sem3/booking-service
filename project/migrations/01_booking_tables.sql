@@ -4,17 +4,15 @@ CREATE TABLE users (
     full_name TEXT NOT NULL,
     phone TEXT NOT NULL
 );
-
 CREATE TABLE bookings (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
+    user_id INTEGER NOT NULL,
     hotel_id INTEGER NOT NULL,
     room_id INTEGER NOT NULL,
-    check_in_date DATE NOT NULL,
-    check_out_date DATE NOT NULL,
-    guests_count INTEGER DEFAULT 1,
-    total_price DECIMAL(10,2) NOT NULL
+    check_in_date TIMESTAMP NOT NULL,
+    check_out_date TIMESTAMP NOT NULL,
+    guests_count INT NOT NULL,
+    total_price DECIMAL(10,2) NOT NULL,
+    status TEXT DEFAULT 'confirmed'
 );
-
-CREATE INDEX idx_bookings_user ON bookings(user_id);
-CREATE INDEX idx_bookings_dates ON bookings(check_in_date, check_out_date);
+CREATE INDEX idx_bookings_room_dates ON bookings(room_id, check_in_date, check_out_date);

@@ -16,10 +16,8 @@ CREATE TABLE room_types_in_hotels (
 CREATE TABLE rooms (
     id SERIAL PRIMARY KEY,
     room_type INTEGER REFERENCES room_types_in_hotels(id),
-    room_number TEXT NOT NULL,
-    is_available BOOLEAN DEFAULT TRUE
+    room_number TEXT NOT NULL
 );
 
 CREATE INDEX idx_rooms_type_hotel ON room_types_in_hotels(hotel_id);
 CREATE INDEX idx_rooms_hotel ON rooms(room_type);
-CREATE INDEX idx_rooms_available ON rooms(is_available) WHERE is_available = true;

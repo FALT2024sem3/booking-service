@@ -77,7 +77,6 @@ type GetRoomPriceResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Price         float64                `protobuf:"fixed64,1,opt,name=price,proto3" json:"price,omitempty"`
 	Currency      string                 `protobuf:"bytes,2,opt,name=currency,proto3" json:"currency,omitempty"`
-	RoomId        int32                  `protobuf:"varint,3,opt,name=room_id,json=roomId,proto3" json:"room_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -126,11 +125,100 @@ func (x *GetRoomPriceResponse) GetCurrency() string {
 	return ""
 }
 
-func (x *GetRoomPriceResponse) GetRoomId() int32 {
+type GetRoomsIDRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	HotelId       int32                  `protobuf:"varint,1,opt,name=hotel_id,json=hotelId,proto3" json:"hotel_id,omitempty"`
+	RoomTypeId    int32                  `protobuf:"varint,2,opt,name=room_type_id,json=roomTypeId,proto3" json:"room_type_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRoomsIDRequest) Reset() {
+	*x = GetRoomsIDRequest{}
+	mi := &file_package_proto_fast_stable_server_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRoomsIDRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRoomsIDRequest) ProtoMessage() {}
+
+func (x *GetRoomsIDRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_package_proto_fast_stable_server_proto_msgTypes[2]
 	if x != nil {
-		return x.RoomId
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRoomsIDRequest.ProtoReflect.Descriptor instead.
+func (*GetRoomsIDRequest) Descriptor() ([]byte, []int) {
+	return file_package_proto_fast_stable_server_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *GetRoomsIDRequest) GetHotelId() int32 {
+	if x != nil {
+		return x.HotelId
 	}
 	return 0
+}
+
+func (x *GetRoomsIDRequest) GetRoomTypeId() int32 {
+	if x != nil {
+		return x.RoomTypeId
+	}
+	return 0
+}
+
+type GetRoomsIDResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RoomIds       []int32                `protobuf:"varint,1,rep,packed,name=room_ids,json=roomIds,proto3" json:"room_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRoomsIDResponse) Reset() {
+	*x = GetRoomsIDResponse{}
+	mi := &file_package_proto_fast_stable_server_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRoomsIDResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRoomsIDResponse) ProtoMessage() {}
+
+func (x *GetRoomsIDResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_package_proto_fast_stable_server_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRoomsIDResponse.ProtoReflect.Descriptor instead.
+func (*GetRoomsIDResponse) Descriptor() ([]byte, []int) {
+	return file_package_proto_fast_stable_server_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetRoomsIDResponse) GetRoomIds() []int32 {
+	if x != nil {
+		return x.RoomIds
+	}
+	return nil
 }
 
 var File_package_proto_fast_stable_server_proto protoreflect.FileDescriptor
@@ -141,13 +229,20 @@ const file_package_proto_fast_stable_server_proto_rawDesc = "" +
 	"\x13GetRoomPriceRequest\x12\x19\n" +
 	"\bhotel_id\x18\x01 \x01(\x05R\ahotelId\x12 \n" +
 	"\froom_type_id\x18\x02 \x01(\x05R\n" +
-	"roomTypeId\"a\n" +
+	"roomTypeId\"H\n" +
 	"\x14GetRoomPriceResponse\x12\x14\n" +
 	"\x05price\x18\x01 \x01(\x01R\x05price\x12\x1a\n" +
-	"\bcurrency\x18\x02 \x01(\tR\bcurrency\x12\x17\n" +
-	"\aroom_id\x18\x03 \x01(\x05R\x06roomId2]\n" +
+	"\bcurrency\x18\x02 \x01(\tR\bcurrency\"P\n" +
+	"\x11GetRoomsIDRequest\x12\x19\n" +
+	"\bhotel_id\x18\x01 \x01(\x05R\ahotelId\x12 \n" +
+	"\froom_type_id\x18\x02 \x01(\x05R\n" +
+	"roomTypeId\"/\n" +
+	"\x12GetRoomsIDResponse\x12\x19\n" +
+	"\broom_ids\x18\x01 \x03(\x05R\aroomIds2\xa6\x01\n" +
 	"\fHotelService\x12M\n" +
-	"\fGetRoomPrice\x12\x1d.hotel.v1.GetRoomPriceRequest\x1a\x1e.hotel.v1.GetRoomPriceResponseB^Z\\github.com/FALT2024sem3/booking-service/tree/open-api/project/package/fast/stable;faststableb\x06proto3"
+	"\fGetRoomPrice\x12\x1d.hotel.v1.GetRoomPriceRequest\x1a\x1e.hotel.v1.GetRoomPriceResponse\x12G\n" +
+	"\n" +
+	"GetRoomsID\x12\x1b.hotel.v1.GetRoomsIDRequest\x1a\x1c.hotel.v1.GetRoomsIDResponseB8Z6booking-service/project/package/fast/stable;faststableb\x06proto3"
 
 var (
 	file_package_proto_fast_stable_server_proto_rawDescOnce sync.Once
@@ -161,16 +256,20 @@ func file_package_proto_fast_stable_server_proto_rawDescGZIP() []byte {
 	return file_package_proto_fast_stable_server_proto_rawDescData
 }
 
-var file_package_proto_fast_stable_server_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_package_proto_fast_stable_server_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_package_proto_fast_stable_server_proto_goTypes = []any{
 	(*GetRoomPriceRequest)(nil),  // 0: hotel.v1.GetRoomPriceRequest
 	(*GetRoomPriceResponse)(nil), // 1: hotel.v1.GetRoomPriceResponse
+	(*GetRoomsIDRequest)(nil),    // 2: hotel.v1.GetRoomsIDRequest
+	(*GetRoomsIDResponse)(nil),   // 3: hotel.v1.GetRoomsIDResponse
 }
 var file_package_proto_fast_stable_server_proto_depIdxs = []int32{
 	0, // 0: hotel.v1.HotelService.GetRoomPrice:input_type -> hotel.v1.GetRoomPriceRequest
-	1, // 1: hotel.v1.HotelService.GetRoomPrice:output_type -> hotel.v1.GetRoomPriceResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	2, // 1: hotel.v1.HotelService.GetRoomsID:input_type -> hotel.v1.GetRoomsIDRequest
+	1, // 2: hotel.v1.HotelService.GetRoomPrice:output_type -> hotel.v1.GetRoomPriceResponse
+	3, // 3: hotel.v1.HotelService.GetRoomsID:output_type -> hotel.v1.GetRoomsIDResponse
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -187,7 +286,7 @@ func file_package_proto_fast_stable_server_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_package_proto_fast_stable_server_proto_rawDesc), len(file_package_proto_fast_stable_server_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

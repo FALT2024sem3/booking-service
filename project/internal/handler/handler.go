@@ -1,14 +1,10 @@
 package handler
 
 import (
-	"bytes"
-	"fmt"
-	"io"
-	"log"
-	"net/http"
-
 	"encoding/json"
+	"fmt"
 
+	"hotel-booking-system/internal/notification"
 	"hotel-booking-system/package/events"
 
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
@@ -27,12 +23,14 @@ func (h *Handler) HandleMessage(message []byte, topic kafka.TopicPartition, cn i
 		logrus.Errorf("Failed to parse event JSON: %v", err)
 		return nil
 	}
+
 	logrus.Infof("Processing booking ID: %d for email: %s", event.BookingID, event.UserEmail)
-	data := map[string]interface{}{
-		"to_addr":  event.UserEmail,
-		"subject":  "Подтверждение бронирования",
-		"template": "hello_email",
-		"vars": map[string]string{
+
+	reqBody := notification.EmailWithTemplateRequestBody{
+		ToAddr:   event.UserEmail,
+		Subject:  "Подтверждение бронирования",
+		Template: "hello_email",
+		Vars: map[string]string{
 			"UserName":  event.UserName,
 			"BookingID": fmt.Sprintf("%d", event.BookingID),
 			"UserEmail": event.UserEmail,
@@ -40,19 +38,11 @@ func (h *Handler) HandleMessage(message []byte, topic kafka.TopicPartition, cn i
 		},
 	}
 
-	jsonData, _ := json.Marshal(data)
-
-	resp, err := http.Post(
-		"http://localhost:8090/html_email",
-		"application/json",
-		bytes.NewBuffer(jsonData),
-	)
-	if err != nil {
-		log.Fatal(err)
+	if err := notification.SendEmailLogic(reqBody); err != nil {
+		logrus.Errorf("Failed to send email: %v", err)
+		return nil
 	}
-	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
-	fmt.Printf("Response: %s\n", body)
+	logrus.Info("Email sent successfully via Kafka handler")
 	return nil
 }
