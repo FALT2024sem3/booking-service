@@ -6,19 +6,16 @@ services:
       POSTGRES_DB: booking_db
       POSTGRES_USER: booking_user
       POSTGRES_PASSWORD: booking_pass
-#      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
     ports:
       - "5436:5432"
     volumes:
       - ./migrations/01_booking_tables.sql:/docker-entrypoint-initdb.d/01.sql
       - ./scripts/init_booking_data.sql:/docker-entrypoint-initdb.d/02_data.sql
-      - booking-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U booking_user -d booking_db"]
       interval: 5s
       timeout: 5s
       retries: 5
-
   hotel-db:
     image: postgres:15-alpine
     container_name: hotel-db
@@ -26,102 +23,83 @@ services:
       POSTGRES_DB: hotel_db
       POSTGRES_USER: hotel_user
       POSTGRES_PASSWORD: hotel_pass
-      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
     ports:
       - "5437:5432"
     volumes:
       - ./migrations/02_hotel_tables.sql:/docker-entrypoint-initdb.d/01.sql
       - ./scripts/init_hotel_data.sql:/docker-entrypoint-initdb.d/02_data.sql
-      - hotel-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U hotel_user -d hotel_db"]
       interval: 5s
       timeout: 5s
       retries: 5
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.7.1
-    hostname: zookeeper
+    image: confluentinc/cp-zookeeper:7.4.0
     container_name: zookeeper
-    ports:
-      - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-      ZOOKEEPER_SERVER_ID: 1
-      ZOOKEEPER_INIT_LIMIT: 3
-      ZOOKEEPER_SYNC_LIMIT: 2
-    networks:
-      - kafka-net
-
   kafka1:
-    image: confluentinc/cp-server:7.7.1
-    hostname: kafka1
+    image: confluentinc/cp-server:7.4.0
     container_name: kafka1
-    depends_on:
-      - zookeeper
-    ports:
-      - "9091:9091"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:29091,PLAINTEXT_HOST://localhost:9091
-    networks:
-      - kafka-net
-
-  kafka2:
-    image: confluentinc/cp-server:7.7.1
-    hostname: kafka2
-    container_name: kafka2
     depends_on:
       - zookeeper
     ports:
       - "9092:9092"
     environment:
-      KAFKA_BROKER_ID: 2
+      KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka2:29092,PLAINTEXT_HOST://localhost:9092
-    networks:
-      - kafka-net
-
-  kafka3:
-    image: confluentinc/cp-server:7.7.1
-    hostname: kafka3
-    container_name: kafka3
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  hotel-service:
+    build:
+      context: .
+      dockerfile: internal/hotel-srv/Dockerfile
+    container_name: hotel_service
+    ports:
+      - "8081:8081"
+      - "50051:50051"
     depends_on:
-      - zookeeper
-    ports:
-      - "9093:9093"
+      hotel-db:
+        condition: service_healthy
     environment:
-      KAFKA_BROKER_ID: 3
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka3:29093,PLAINTEXT_HOST://localhost:9093
-    networks:
-      - kafka-net
-
-  kafka-ui:
-    container_name: kafka-ui
-    image: provectuslabs/kafka-ui:latest
+      DB_HOST: hotel-db
+      DB_PORT: 5432
+      DB_USER: hotel_user
+      DB_PASS: hotel_pass
+      DB_NAME: hotel_db
+      HTTP_PORT: ":8081"
+      GRPC_PORT: ":50051"
+  booking-service:
+    build:
+      context: .
+      dockerfile: internal/booking-srv/Dockerfile
+    container_name: booking_service
     ports:
-      - 9020:8080
+      - "8080:8080"
+    depends_on:
+      booking-db:
+        condition: service_healthy
+      kafka1:
+        condition: service_started
+      hotel-service:
+        condition: service_started
     environment:
-      AUTH_TYPE: DISABLED
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka1:29091,kafka2:29092,kafka3:29093
-      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+      DB_HOST: booking-db
+      DB_PORT: 5432
+      DB_USER: booking_user
+      DB_PASS: booking_pass
+      DB_NAME: booking_db
+      KAFKA_BROKERS: "kafka1:29092"
+      HOTEL_SERVICE_ADDR: "hotel-service:50051"
+  notification-service:
+    build:
+      context: .
+      dockerfile: internal/notification/Dockerfile
+    container_name: notification_service
     depends_on:
       - kafka1
-      - kafka2
-      - kafka3
-    networks:
-      - kafka-net
-
-networks:
-  kafka-net:
-    driver: bridge
-
-volumes:
-  booking-data:
-  hotel-data:
+    environment:
+      KAFKA_BROKERS: "kafka1:29092"
+      SMTP_HOST: "smtp.example.com"

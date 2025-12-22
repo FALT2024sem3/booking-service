@@ -2,11 +2,7 @@ syntax = "proto3";
 
 package hotel.v1;
 
-option go_package = "github.com/FALT2024sem3/booking-service/tree/open-api/project/package/fast/stable;faststable";
-
-service HotelService {
-  rpc GetRoomPrice (GetRoomPriceRequest)  returns (GetRoomPriceResponse);
-}
+option go_package = "booking-service/project/package/fast/stable;faststable";
 
 message GetRoomPriceRequest {
   int32 hotel_id = 1;
@@ -16,5 +12,18 @@ message GetRoomPriceRequest {
 message GetRoomPriceResponse {
   double price = 1;
   string currency = 2;
-  int32 room_id = 3;
+}
+
+service HotelService {
+  rpc GetRoomPrice (GetRoomPriceRequest) returns (GetRoomPriceResponse);
+  rpc GetRoomsID (GetRoomsIDRequest) returns (GetRoomsIDResponse);
+}
+
+message GetRoomsIDRequest {
+  int32 hotel_id = 1;
+  int32 room_type_id = 2;
+}
+
+message GetRoomsIDResponse {
+  repeated int32 room_ids = 1;
 }
